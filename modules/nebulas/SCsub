@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+Import('env')
+Import('env_modules')
+
+env_nebulas = env_modules.Clone()
+env_nebulas.add_source_files(env.modules_sources, "*.cpp")
+env_nebulas.add_source_files(env.modules_sources, "keccak-tiny/*.c")
+env_nebulas.add_source_files(env.modules_sources, "libbtc/*.c")
+
+# Thirdparty source files
+
+thirdparty_dir = "#thirdparty/secp256k1/"
+thirdparty_sources = [
+    "src/secp256k1.c"
+]
+thirdparty_sources = [thirdparty_dir + file for file in thirdparty_sources]
+
+env_nebulas.Prepend(CPPPATH=[thirdparty_dir, thirdparty_dir + "include/", "#thirdparty/mbedtls/include/"])
+env_nebulas.Append(CPPDEFINES=["GODOT_NEBULAS", "USE_NUM_NONE"])
+
+if env["platform"] in ["android", "iphone", "javascript"]:
+  env_nebulas.Append(CPPDEFINES=[
+    "USE_SCALAR_8X32", "USE_SCALAR_INV_BUILTIN",
+    "USE_FIELD_INV_BUILTIN", "USE_FIELD_10X26", "STDC_HEADERS",
+    "ENABLE_MODULE_RECOVERY", "HAVE_BUILTIN_EXPECT",
+    "HAVE_DLFCN_H", "HAVE_INTTYPES_H", "HAVE_MEMORY_H", "HAVE_STDINT_H",
+    "HAVE_STDLIB_H", "HAVE_STRINGS_H", "HAVE_STRING_H", "HAVE_SYS_STAT_H",
+    "HAVE_SYS_TYPES_H", "HAVE_UNISTD_H"])
+else:
+  env_nebulas.Append(CPPDEFINES=[
+    "USE_SCALAR_4X64", "USE_SCALAR_INV_BUILTIN",
+    "USE_FIELD_INV_BUILTIN", "USE_FIELD_5X52", "USE_ASM_X86_64", "STDC_HEADERS",
+    "HAVE___INT128", "ENABLE_MODULE_RECOVERY", "HAVE_BUILTIN_EXPECT",
+    "HAVE_DLFCN_H", "HAVE_INTTYPES_H", "HAVE_MEMORY_H", "HAVE_STDINT_H",
+    "HAVE_STDLIB_H", "HAVE_STRINGS_H", "HAVE_STRING_H", "HAVE_SYS_STAT_H",
+    "HAVE_SYS_TYPES_H", "HAVE_UNISTD_H"])
+
+env_thirdparty = env_nebulas.Clone()
+env_thirdparty.disable_warnings()
+env_thirdparty.add_source_files(env.modules_sources, thirdparty_sources )
