@@ -3,524 +3,16 @@
 
 #include "core/crypto/crypto_core.h"
 #include "core/bind/core_bind.h"
+#include "core/os/os.h"
 
 #include "keccak-tiny/keccak-tiny.h"
-#include "libbtc/ripemd160.h"
-#include "libbtc/base58.h"
+#include "libneb/ripemd160.h"
+#include "libneb/base58.h"
+#include "protobuf/transaction.pb.h"
 
-/*#include <btc/utils.h>
-#include <btc/bip32.h>
-#include <btc/base58.h>
-#include <btc/sha2.h>
-#include <btc/hash.h>
-#include <btc/ripemd160.h>
-#include <btc/script.h>
-#include <secp256k1.h>
-#include <secp256k1_recovery.h>
-
-
-#define DUST_LIMIT 560
-#define MIN_RELAY_FEE 251
-
-const btc_chainparams dash_chainparams_main = {
-    "dash",
-    0x4C,
-    0x10,
-    "ds",
-    0xCC,
-    0x0488ADE4,
-    0x0488B21E,
-    {0xbf, 0x0c, 0x6b, 0xbd},
-    {0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72, 0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f, 0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c, 0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00},
-    9999,
-    {{"dnsseed.dash.org"}, 0},
-};
-
-const btc_chainparams mona_chainparams_main = {
-    "mona",
-    0x32,
-    0x05,
-    "mn",
-    0xB0,
-    0x0488ADE4,
-    0x0488B21E,
-    {0xfb, 0xc0, 0xb6, 0xdb},
-    {0x6f, 0xe2, 0x8c, 0x0a, 0xb6, 0xf1, 0xb3, 0x72, 0xc1, 0xa6, 0xa2, 0x46, 0xae, 0x63, 0xf7, 0x4f, 0x93, 0x1e, 0x83, 0x65, 0xe1, 0x5a, 0x08, 0x9c, 0x68, 0xd6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00},
-    9401,
-    {{"dnsseed.monacoin.org"}, 0},
-};
-
-// from https://github.com/manicmaniac/arc4/blob/master/arc4.c
-typedef struct arc4_state {
-    unsigned char x;
-    unsigned char y;
-    unsigned char s[256];
-} arc4_state;
-
-static void arc4_init(arc4_state *state, const unsigned char *key, size_t keylen) {
-    int i;
-    unsigned char j, k;
-
-    for (i = 0; i < 256; i++) {
-        state->s[i] = (unsigned char)i;
-    }
-    state->x = 0;
-    state->y = 0;
-    j = 0;
-    for (i = 0; i < 256; i++) {
-        j += state->s[i] + key[i % keylen];
-        k = state->s[i];
-        state->s[i] = state->s[j];
-        state->s[j] = k;
-    }
+bool Nebulas::_calc_pubkey() {
+	return secp256k1_ec_pubkey_create(secp256k1_ctx, &current_public_key, current_private_key);
 }
-
-static void arc4_crypt(arc4_state *state, unsigned char *buf, size_t buflen) {
-    unsigned char x;
-    unsigned char y;
-    unsigned char *s;
-    size_t i;
-    unsigned char sx;
-    unsigned char sy;
-
-    x = state->x;
-    y = state->y;
-    s = state->s;
-    for (i = 0; i < buflen; i++) {
-        x++;
-        y += s[x];
-        sx = s[x];
-        sy = s[y];
-        s[x] = sy;
-        s[y] = sx;
-        buf[i] ^= s[(sx + sy) & 0xFF];
-    }
-    state->x = x;
-    state->y = y;
-}
-
-static uint8_t buffer_whex_to_uint8[TO_UINT8_HEX_BUF_LEN];
-
-uint8_t* utils_whex_to_uint8(const String &str)
-{
-    uint8_t c;
-    int i;
-    if (str.length() > TO_UINT8_HEX_BUF_LEN) {
-        return NULL;
-    }
-    memset(buffer_whex_to_uint8, 0, TO_UINT8_HEX_BUF_LEN);
-    for (i = 0; i < str.length() / 2; i++) {
-        c = 0;
-        if (str[i * 2] >= '0' && str[i * 2] <= '9') {
-            c += (str[i * 2] - '0') << 4;
-        }
-        if (str[i * 2] >= 'a' && str[i * 2] <= 'f') {
-            c += (10 + str[i * 2] - 'a') << 4;
-        }
-        if (str[i * 2] >= 'A' && str[i * 2] <= 'F') {
-            c += (10 + str[i * 2] - 'A') << 4;
-        }
-        if (str[i * 2 + 1] >= '0' && str[i * 2 + 1] <= '9') {
-            c += (str[i * 2 + 1] - '0');
-        }
-        if (str[i * 2 + 1] >= 'a' && str[i * 2 + 1] <= 'f') {
-            c += (10 + str[i * 2 + 1] - 'a');
-        }
-        if (str[i * 2 + 1] >= 'A' && str[i * 2 + 1] <= 'F') {
-            c += (10 + str[i * 2 + 1] - 'A');
-        }
-        buffer_whex_to_uint8[i] = c;
-    }
-    return buffer_whex_to_uint8;
-}
-
-Error Bitcoin::load_seed(const String &seed_hex) {
-	node_loaded = true;
-  uint8_t *tmpbuf = utils_whex_to_uint8(seed_hex);
-  memcpy(current_seed, tmpbuf, 16);
-	btc_hdnode_from_seed(current_seed, 16, &node);
-
-	return OK;
-}
-
-void Bitcoin::set_chain(const String &chain_name) {
-	if (chain_name == "mainnet") {
-		current_chainparams = &btc_chainparams_main;
-    current_signed_message_prefix = String("\u0018Bitcoin Signed Message:\n");
-	} else if (chain_name == "testnet") {
-		current_chainparams = &btc_chainparams_test;
-    current_signed_message_prefix = String("\u0018Bitcoin Signed Message:\n");
-	} else if (chain_name == "regtest") {
-		current_chainparams = &btc_chainparams_regtest;
-    current_signed_message_prefix = String("\u0018Bitcoin Signed Message:\n");
-	} else if (chain_name == "dash") {
-		current_chainparams = &dash_chainparams_main;
-    current_signed_message_prefix = String("\u0018Dash Signed Message:\n");
-	} else if (chain_name == "mona") {
-		current_chainparams = &mona_chainparams_main;
-    current_signed_message_prefix = String("\u0018Monacoin Signed Message:\n");
-	}
-}
-
-void print_hex(uint8_t *buf, int ln) {
-  char hex[200];
-  utils_bin_to_hex(buf, ln, hex);
-  printf("-> %s\n", hex);
-}
-
-void print_privkey(uint8_t *buf) {
-  char hex[BTC_ECKEY_PKEY_LENGTH * 2 + 1];
-  utils_bin_to_hex(buf, BTC_ECKEY_PKEY_LENGTH, hex);
-  printf("privkey -> %s\n", hex);
-}
-
-void print_pubkey(uint8_t *buf) {
-  char hex[BTC_ECKEY_COMPRESSED_LENGTH * 2 + 1];
-  utils_bin_to_hex(buf, BTC_ECKEY_COMPRESSED_LENGTH, hex);
-  printf("pubkey -> %s\n", hex);
-}
-
-void Bitcoin::set_hd_path(const String &hd_path) {
-	CharString asc_hd_path = hd_path.ascii();
-  btc_hdnode_from_seed(current_seed, 16, &node);
-  btc_hd_generate_key(&node, asc_hd_path.get_data(), node.private_key, node.chain_code, false);
-}
-
-String Bitcoin::get_p2pkh() {
-	char str[112];
-  btc_pubkey pk;
-  for (int i=0; i < BTC_ECKEY_COMPRESSED_LENGTH; i++) {
-    pk.pubkey[i] = node.public_key[i];
-  }
-  pk.compressed = true;
-
-  btc_pubkey_getaddr_p2pkh(&pk, current_chainparams, str);
-
-	return String(str);
-}
-
-int varuintEncodingLength(unsigned int v) {
-  if (v < 0xfd) {
-    return 1;
-  } else if (v < 0xffff) {
-    return 3;
-  } else if (v  < 0xffffffff) {
-    return 5;
-  } else {
-    return 9;
-  }
-}
-
-void encodeVaruint(unsigned char *buf, unsigned int v) {
-  if (v < 0xfd) {
-    buf[0] = (char)(v & 0xFF);
-  } else if (v < 0xffff) {
-    buf[0] = 0xfd;
-    buf[1] = (char)(v & 0xFF);
-    buf[2] = (char)((v & 0xFF00) >> 8);
-  } else if (v  < 0xffffffff) {
-    buf[0] = 0xfe;
-    buf[1] = (char)(v & 0xFF);
-    buf[2] = (char)((v & 0xFF00) >> 8);
-    buf[3] = (char)((v & 0xFF0000) >> 16);
-    buf[4] = (char)((v & 0xFF000000) >> 24);
-  } else {
-    buf[0] = 0xff;
-  }
-}
-
-Vector<uint8_t> Bitcoin::magic_hash(const String &p_message) {
-  CharString msg = p_message.utf8();
-  CharString msgPrefix = current_signed_message_prefix.utf8();
-
-  unsigned int msgSize = msg.size() - 1;
-  unsigned int prefixSize = msgPrefix.size() - 1;
-  unsigned int vuilength = varuintEncodingLength(msgSize);
-
-  unsigned int headerSize = vuilength + prefixSize;
-  unsigned int totalSize = msgSize + headerSize;
-
-  Vector<uint8_t> buf;
-  buf.resize(totalSize);
-
-  for (unsigned int i=0; i < prefixSize; i++) {
-    buf.write[i] = msgPrefix.get(i);
-  }
-
-  encodeVaruint(&buf.write[prefixSize], msgSize);
-
-  for (unsigned int i=0; i < msgSize; i++) {
-    buf.write[headerSize + i] = msg.get(i);
-  }
-
-  Vector<uint8_t> hash;
-  hash.resize(32);
-
-  CryptoCore::SHA256Context sha256;
-  sha256.start();
-  sha256.update(&buf.write[0], totalSize);
-  sha256.finish(&hash.write[0]);
-
-  sha256.start();
-  sha256.update(&hash.write[0], 32);
-  sha256.finish(&hash.write[0]);
-
-  return hash;
-}
-
-String Bitcoin::sign_message(const String &p_message) {
-  secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
-  secp256k1_ecdsa_recoverable_signature rsig;
-  unsigned char sig[64];
-  int recid = 0;
-
-  Vector<uint8_t> hash = magic_hash(p_message);
-  secp256k1_ecdsa_sign_recoverable(ctx, &rsig, &hash.write[0], node.private_key, NULL, NULL);
-  secp256k1_ecdsa_recoverable_signature_serialize_compact(ctx, sig, &recid, &rsig);
-
-  secp256k1_context_destroy(ctx);
-
-  PoolByteArray pba;
-  pba.resize(65);
-  pba.set(0, recid + 31);
-  for (int i=0; i < 64; i++) {
-    pba.set(i + 1, sig[i]);
-  }
-
-  _Marshalls m;
-  return m.raw_to_base64(pba);
-}
-
-bool Bitcoin::verify_message(const String &p_message, const String &p_address, const String &p_signature) {
-  _Marshalls m;
-  PoolByteArray pba = m.base64_to_raw(p_signature);
-
-  if (pba.size() == 65) {
-    unsigned int flag = pba.get(0) - 27;
-    int recid = flag & 3;
-    Vector<uint8_t> hash = magic_hash(p_message);
-    secp256k1_ecdsa_recoverable_signature rsig;
-    secp256k1_pubkey recpubkey;
-
-    secp256k1_context *ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
-
-    for (int i=0; i < 64; i++) {
-      recpubkey.data[i] = 0;
-    }
-
-    if (secp256k1_ecdsa_recoverable_signature_parse_compact(ctx, &rsig, &pba.write()[1], recid) == 1) {
-      if (secp256k1_ecdsa_recover(ctx, &recpubkey, &rsig, &hash.write[0]) == 1) {
-        // recpubkey tiene el pubkey antes de hash160 de la clave que firmo el mensaje
-        unsigned char output[65];
-        size_t output_length = 65;
-        unsigned int flags = SECP256K1_EC_COMPRESSED;
-        secp256k1_ec_pubkey_serialize(ctx, &output[0], &output_length, &recpubkey, flags);
-
-        Vector<uint8_t> pubkeyhash;
-        pubkeyhash.resize(34);
-        int writtenBytes = btc_base58_decode_check(p_address.ascii().ptr(), &pubkeyhash.write[0], pubkeyhash.size());
-
-        if (writtenBytes > 0) {
-          uint256 hashout;
-          sha256_Raw(output, output_length, hashout);
-          btc_ripemd160(hashout, SHA256_DIGEST_LENGTH, hashout);
-
-          return memcmp(&pubkeyhash.write[0], hashout, 20);
-        } else {
-          printf("Invalid address!\n");
-          return false;
-        }
-      } else {
-        printf("Couldnt recover signature!\n");
-        return false;
-      }
-    } else {
-      printf("Badly encoded signature!\n");
-      return false;
-    }
-
-    secp256k1_context_destroy(ctx);
-  } else {
-    printf("Not enough data (must decode 65 bytes from base64, got %d)!\n", pba.size());
-    return false;
-  }
-}
-
-void Bitcoin::start_tx() {
-  tx = btc_tx_new();
-  value_in = 0;
-  value_out = 0;
-  amounts.clear();
-}
-
-void Bitcoin::add_input(const String &p_txid, uint32_t p_vout, int64_t p_value, const String &p_scriptsig) {
-  btc_tx_in *txin = btc_tx_in_new();
-
-  uint8_t *txid = utils_whex_to_uint8(p_txid);
-  for (int i=0; i < 32; i++) {
-    txin->prevout.hash[31 - i] = txid[i];
-  }
-  txin->prevout.n = p_vout;
-  txin->sequence = 0xffffffff;
-
-  uint8_t sighash[32];
-  memset(sighash, 0, 32);
-
-
-  cstring* script = cstr_new_buf(utils_whex_to_uint8(p_scriptsig), p_scriptsig.size() / 2);
-
-  txin->script_sig = script;
-  amounts.push_back(p_value);
-  value_in += p_value;
-
-  vector_add(tx->vin, txin);
-}
-
-bool Bitcoin::add_output_address_out(const String &p_address, int64_t p_value) {
-  value_out += p_value;
-  return btc_tx_add_address_out(tx, current_chainparams, p_value, p_address.ascii().ptr());
-}
-
-PoolByteArray Bitcoin::arc4_hexkey(PoolByteArray p_data, const String &p_key) {
-  arc4_state st;
-  uint8_t *key = utils_whex_to_uint8(p_key);
-  arc4_init(&st, key, p_key.size()/2);
-  PoolByteArray::Write w = p_data.write();
-  arc4_crypt(&st, w.ptr(), p_data.size());
-  PoolByteArray result;
-  result.resize(p_data.size());
-
-  for (int i=0; i < p_data.size(); i++) {
-    result.set(i, w[i]);
-  }
-
-  return result;
-}
-
-PoolByteArray Bitcoin::arc4(PoolByteArray p_data, PoolByteArray p_key) {
-  arc4_state st;
-  arc4_init(&st, p_key.write().ptr(), p_key.size());
-  PoolByteArray::Write w = p_data.write();
-  arc4_crypt(&st, w.ptr(), p_data.size());
-  PoolByteArray result;
-  result.resize(p_data.size());
-
-  for (int i=0; i < p_data.size(); i++) {
-    result.set(i, w[i]);
-  }
-
-  return result;
-}
-
-PoolByteArray Bitcoin::decode_address(const String &p_address) {
-  uint8_t data[64];
-
-  int written = btc_base58_decode_check(p_address.ascii().ptr(), data, 64);
-
-  PoolByteArray result;
-
-  if (written >= 0) {
-    result.resize(written);
-
-    for (int i=0; i < written; i++) {
-      result.set(i, data[i]);
-    }
-  }
-
-  return result;
-}
-
-bool Bitcoin::add_output_data_out(PoolByteArray p_data, int64_t p_value) {
-  value_out += p_value;
-
-  return btc_tx_add_data_out(tx, p_value, p_data.write().ptr(), p_data.size());
-}
-
-bool Bitcoin::set_change(const String &p_address, int64_t p_feerate) {
-  uint32_t expectedSize = tx->vin->len * 133 + tx->vout->len * 33 + 16;
-  if (value_in > value_out) {
-    uint64_t available = value_in - value_out;
-    uint64_t expectedFee = p_feerate * expectedSize;
-
-    if (expectedFee < MIN_RELAY_FEE) {
-      expectedFee = MIN_RELAY_FEE;
-    }
-
-    if (available > expectedFee) {
-      uint64_t expectedRemainAfterFee = available - expectedFee;
-
-      if (expectedRemainAfterFee < DUST_LIMIT) {
-        return true;
-      } else {
-        add_output_address_out(p_address, expectedRemainAfterFee);
-        return true;
-      }
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
-  //return btc_tx_add_address_out(tx, current_chainparams, p_value, p_address.ascii().ptr());
-}
-
-int Bitcoin::sign_inputs(uint32_t inputindex) {
-  if (inputindex < tx->vin->len) {
-    uint8_t sigcomp[64] = {0};
-    uint8_t sigder[76] = {0};
-    int sigder_len = 0;
-    btc_key pk;
-    for (int i=0; i < BTC_ECKEY_PKEY_LENGTH; i++) {
-      pk.privkey[i] = node.private_key[i];
-    }
-
-    int signResult = btc_tx_sign_input(
-        tx, ((btc_tx_in*)(tx->vin->data[inputindex]))->script_sig,
-        amounts.get(inputindex), &pk, inputindex, SIGHASH_ALL,
-        sigcomp, sigder, &sigder_len);
-
-    cstring *signedVin = ((btc_tx_in*)(tx->vin->data[inputindex]))->script_sig;
-    cstring *partial = cstr_new_buf(&signedVin->str[25], signedVin->len - 25);
-    ((btc_tx_in*)(tx->vin->data[inputindex]))->script_sig = partial;
-    cstr_free(signedVin, true);
-
-    return signResult;
-  } else {
-    return -1;
-  }
-}
-
-String Bitcoin::build_tx() {
-  cstring *s = cstr_new_sz(166);
-  btc_tx_serialize(s, tx, true);
-
-  char hexbuf[s->len*2+1];
-  utils_bin_to_hex((unsigned char*)s->str, s->len, hexbuf);
-
-  String result(hexbuf);
-  cstr_free(s, true);
-
-  return result;
-}
-
-String Bitcoin::get_tx_hash() {
-  uint8_t hashout[32];
-
-  btc_tx_hash(tx, hashout);
-
-  char hex[65];
-  utils_bin_to_hex(hashout, 32, hex);
-  String result(hex);
-
-  return result;
-}
-
-void Bitcoin::end_tx() {
-  if (tx != NULL) {
-    btc_tx_free(tx);
-    tx = NULL;
-  }
-}*/
 
 void Nebulas::gen_private_key() {
 	int ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, NULL, 0);
@@ -528,6 +20,8 @@ void Nebulas::gen_private_key() {
   do {
     mbedtls_ctr_drbg_random(&ctr_drbg, current_private_key, ECKEY_PKEY_LENGTH);
   } while (secp256k1_ec_seckey_verify(secp256k1_ctx, (const unsigned char*)current_private_key) == 0);
+
+	_calc_pubkey();
 }
 
 Error Nebulas::load_private_key(PoolByteArray p_data) {
@@ -541,6 +35,7 @@ Error Nebulas::load_private_key(PoolByteArray p_data) {
   }
 
   if (secp256k1_ec_seckey_verify(secp256k1_ctx, (const unsigned char*)current_private_key)) {
+		_calc_pubkey();
     return OK;
   } else {
     return ERR_INVALID_DATA;
@@ -567,15 +62,19 @@ void checksum(uint8_t* out, int outlen, uint8_t* data, int data_len) {
   }
 }
 
-String Nebulas::_get_address_by_type(uint8_t type, uint8_t* data, int data_len) {
-  uint8_t addr_data[26];
+void Nebulas::_get_address_bytes_by_type(uint8_t type, uint8_t* data, int data_len, uint8_t *addr_data) {
   uint8_t sha3_output[32];
   addr_data[0] = PADDING_BYTE;
   addr_data[1] = type;
 
   sha3_256(sha3_output, 32, data, data_len);
   neb_ripemd160(sha3_output, 32, &addr_data[2]);
-  checksum(&addr_data[21], 4, addr_data, 22);
+  checksum(&addr_data[22], 4, addr_data, 22);
+}
+
+String Nebulas::_get_address_by_type(uint8_t type, uint8_t* data, int data_len) {
+  uint8_t addr_data[26];
+	_get_address_bytes_by_type(type, data, data_len, addr_data);
 
   char b58res[70];
   size_t resSize = 70;
@@ -583,21 +82,155 @@ String Nebulas::_get_address_by_type(uint8_t type, uint8_t* data, int data_len) 
   return String(b58res);
 }
 
-/*String Bitcoin::get_p2pkh() {
-	char str[112];
-  btc_pubkey pk;
-  for (int i=0; i < BTC_ECKEY_COMPRESSED_LENGTH; i++) {
-    pk.pubkey[i] = node.public_key[i];
-  }
-  pk.compressed = true;
-
-  btc_pubkey_getaddr_p2pkh(&pk, current_chainparams, str);
-
-	return String(str);
-}*/
-
 String Nebulas::get_address() {
-  return _get_address_by_type(ACCOUNT_BYTE, current_public_key, EC_PUBKEY_LENGTH);
+  return _get_address_by_type(ACCOUNT_BYTE, current_public_key.data, EC_PUBKEY_LENGTH);
+}
+
+uint32_t ul(const String &v) {
+	return std::stoul(v.utf8().get_data());
+}
+
+uint64_t ull(const String &v) {
+	return std::stoull(v.utf8().get_data());
+}
+
+void uint64_integer2bytes(uint64_t v, uint8_t *dest) {
+	 // 128bits
+	 for (int i=15; i >= 0; i--) {
+		 dest[i] = v % 256;
+		 v >>= 8;
+	 }
+}
+
+void uint64_long2bytes(uint64_t v, uint8_t *dest) {
+	// 64bits
+	for (int i=7; i >= 0; i--) {
+		dest[i] = v % 256;
+		v >>= 8;
+	}
+}
+
+void uint64_int2bytes(uint64_t v, uint8_t *dest) {
+	// 32bits
+	for (int i=3; i >= 0; i--) {
+		dest[i] = v % 256;
+		v >>= 8;
+	}
+}
+
+PoolByteArray Nebulas::send(const String &to, const String &value, uint64_t nonce) {
+  corepb::Transaction tx;
+
+	uint8_t from_addr_data[26];
+	uint8_t to_addr_data[26];
+	_get_address_bytes_by_type(ACCOUNT_BYTE, current_public_key.data, EC_PUBKEY_LENGTH, from_addr_data);
+
+	size_t wsz = 26;
+	char *base58data = to.utf8().ptrw();
+	bool dec = neb_base58_decode(to_addr_data, &wsz, base58data);
+	if (dec == 0) {
+		return PoolByteArray();
+	}
+
+	uint64_t timestamp = OS::get_singleton()->get_unix_time() * 1000;
+
+	uint8_t value_data[16];
+	uint8_t gas_price_data[16];
+	uint8_t gas_limit_data[16];
+	uint8_t timestamp_data[8];
+
+	uint64_integer2bytes(ull(value), value_data);
+	uint64_integer2bytes(ull(gas_price), gas_price_data);
+	uint64_integer2bytes(ull(gas_limit), gas_limit_data);
+	uint64_long2bytes(timestamp, timestamp_data);
+
+	::std::string from_str((char *)from_addr_data, 26);
+	::std::string to_str((char *)to_addr_data, 26);
+	::std::string value_str((char *)value_data, 16);
+	::std::string gas_price_str((char *)gas_price_data, 16);
+	::std::string gas_limit_str((char *)gas_limit_data, 16);
+
+	tx.set_chain_id(chain_id);
+	tx.set_from(from_str);
+	tx.set_to(to_str);
+	tx.set_value(value_str);
+	tx.set_gas_price(gas_price_str);
+	tx.set_gas_limit(gas_limit_str);
+
+	tx.set_nonce(nonce);
+	tx.set_timestamp(timestamp);
+	tx.mutable_data()->set_payload("");
+	tx.mutable_data()->set_payload_type("binary");
+
+	size_t prebuf_sz = 84; // 2x address (26 bytes each), 1x 128bit int, 2x 64bit int
+	size_t postbuf_sz = 36; // 1x 32bit int, 2x 128bit int
+	::std::string data_ser;
+	tx.data().SerializeToString(&data_ser);
+
+	size_t payload_sz = data_ser.size();
+	PoolByteArray tx_hashbuf;
+	tx_hashbuf.resize(prebuf_sz + payload_sz + postbuf_sz);
+	PoolByteArray::Write w = tx_hashbuf.write();
+	memcpy(&w[0], from_addr_data, 26);
+	memcpy(&w[26], to_addr_data, 26);
+
+	memcpy(&w[52], value_data, 16);
+	//uint64_integer2bytes(ull(value.utf8().get_data()), &w[52]);
+	uint64_long2bytes(nonce, &w[68]);
+	uint64_long2bytes(timestamp, &w[76]);
+
+	// copy payload to &w[prebuf_sz]
+	memcpy(&w[prebuf_sz], data_ser.c_str(), payload_sz);
+
+	uint64_int2bytes(chain_id, &w[prebuf_sz + payload_sz]);
+	memcpy(&w[prebuf_sz + payload_sz + 4], gas_price_data, 16);
+	memcpy(&w[prebuf_sz + payload_sz + 20], gas_limit_data, 16);
+
+	uint8_t sha3_output[32];
+  sha3_256(sha3_output, 32, &w[0], tx_hashbuf.size());
+
+	::std::string hash((char *)sha3_output, 32);
+	tx.set_hash(hash);
+
+	secp256k1_ecdsa_signature sig, sig_norm;
+	secp256k1_ecdsa_sign(secp256k1_ctx, &sig, sha3_output, current_private_key, NULL, NULL);
+	uint8_t sig_data[65];
+	sig_data[64] = secp256k1_ecdsa_signature_normalize(secp256k1_ctx, &sig_norm, &sig);
+	//memcpy(&sig_data[1], sig_norm.data, 64);
+	secp256k1_ecdsa_signature_serialize_compact(secp256k1_ctx, &sig_data[0], &sig_norm);
+
+	::std::string sign((char *)sig_data, 65);
+	tx.set_sign(sign);
+
+	tx.set_alg(ALG_SECP256K1);
+
+	::std::string outp;
+	tx.SerializeToString(&outp);
+
+	PoolByteArray pba;
+	pba.resize(outp.size());
+	const char *pt = outp.c_str();
+	for (size_t i=0; i < outp.size(); i++) {
+		pba.set(i, pt[i]);
+	}
+
+	return pba;
+}
+
+void Nebulas::set_gas_price(const String &new_gas_price) {
+	gas_price = new_gas_price;
+}
+
+String Nebulas::get_gas_price() {
+	return gas_price;
+}
+
+void Nebulas::set_gas_limit(const String &new_gas_limit) {
+	gas_limit = new_gas_limit;
+}
+
+String Nebulas::get_gas_limit() {
+	return gas_limit;
 }
 
 void Nebulas::_bind_methods() {
@@ -605,12 +238,26 @@ void Nebulas::_bind_methods() {
   ClassDB::bind_method(D_METHOD("get_private_key"), &Nebulas::get_private_key);
   ClassDB::bind_method(D_METHOD("load_private_key", "p_data"), &Nebulas::load_private_key);
   ClassDB::bind_method(D_METHOD("get_address"), &Nebulas::get_address);
+	ClassDB::bind_method(D_METHOD("send", "to", "value", "nonce"), &Nebulas::send);
+
+	ClassDB::bind_method(D_METHOD("set_gas_price", "gas_price"), &Nebulas::set_gas_price);
+	ClassDB::bind_method(D_METHOD("get_gas_price"), &Nebulas::get_gas_price);
+	ClassDB::bind_method(D_METHOD("set_gas_limit", "gas_limit"), &Nebulas::set_gas_limit);
+	ClassDB::bind_method(D_METHOD("get_gas_limit"), &Nebulas::get_gas_limit);
+
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "gas_price", PROPERTY_HINT_TYPE_STRING), "set_gas_price", "get_gas_price");
+	ADD_PROPERTY(PropertyInfo(Variant::STRING, "gas_limit", PROPERTY_HINT_TYPE_STRING), "set_gas_limit", "get_gas_limit");
 }
 
 Nebulas::Nebulas() {
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
+
   secp256k1_ctx = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
   mbedtls_ctr_drbg_init(&ctr_drbg);
 	mbedtls_entropy_init(&entropy);
+
+	chain_id = 1001;
+	alg = 1;
 }
 
 Nebulas::~Nebulas() {
@@ -618,4 +265,6 @@ Nebulas::~Nebulas() {
 	mbedtls_entropy_free(&entropy);
   secp256k1_context_destroy(secp256k1_ctx);
   secp256k1_ctx = NULL;
+
+	google::protobuf::ShutdownProtobufLibrary();
 }

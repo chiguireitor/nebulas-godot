@@ -5,18 +5,111 @@ Import('env_modules')
 
 env_nebulas = env_modules.Clone()
 env_nebulas.add_source_files(env.modules_sources, "*.cpp")
-env_nebulas.add_source_files(env.modules_sources, "keccak-tiny/*.c")
-env_nebulas.add_source_files(env.modules_sources, "libbtc/*.c")
+env_nebulas.add_source_files(env.modules_sources, "keccak-tiny/keccak-tiny.c")
+env_nebulas.add_source_files(env.modules_sources, "libneb/base58.c")
+env_nebulas.add_source_files(env.modules_sources, "libneb/ripemd160.c")
+env_nebulas.add_source_files(env.modules_sources, "protobuf/transaction.pb.cc")
 
 # Thirdparty source files
 
-thirdparty_dir = "#thirdparty/secp256k1/"
-thirdparty_sources = [
+thirdparty_dir_secp256k1 = "#thirdparty/secp256k1/"
+thirdparty_sources_secp256k1 = [
     "src/secp256k1.c"
 ]
-thirdparty_sources = [thirdparty_dir + file for file in thirdparty_sources]
 
-env_nebulas.Prepend(CPPPATH=[thirdparty_dir, thirdparty_dir + "include/", "#thirdparty/mbedtls/include/"])
+thirdparty_dir_protobuf = "#thirdparty/protobuf/"
+thirdparty_sources_protobuf = [
+  "src/google/protobuf/any.cc",
+  "src/google/protobuf/any.pb.cc",
+  "src/google/protobuf/any_lite.cc",
+  "src/google/protobuf/api.pb.cc",
+  "src/google/protobuf/arena.cc",
+  "src/google/protobuf/descriptor.cc",
+  "src/google/protobuf/descriptor.pb.cc",
+  "src/google/protobuf/descriptor_database.cc",
+  "src/google/protobuf/duration.pb.cc",
+  "src/google/protobuf/dynamic_message.cc",
+  "src/google/protobuf/empty.pb.cc",
+  "src/google/protobuf/extension_set.cc",
+  "src/google/protobuf/extension_set_heavy.cc",
+  "src/google/protobuf/field_mask.pb.cc",
+  "src/google/protobuf/generated_enum_util.cc",
+  "src/google/protobuf/generated_message_table_driven.cc",
+  "src/google/protobuf/generated_message_table_driven_lite.cc",
+  "src/google/protobuf/generated_message_util.cc",
+  "src/google/protobuf/implicit_weak_message.cc",
+  "src/google/protobuf/io/coded_stream.cc",
+  "src/google/protobuf/io/gzip_stream.cc",
+  "src/google/protobuf/io/io_win32.cc",
+  "src/google/protobuf/io/printer.cc",
+  "src/google/protobuf/io/strtod.cc",
+  "src/google/protobuf/io/tokenizer.cc",
+  "src/google/protobuf/io/zero_copy_stream.cc",
+  "src/google/protobuf/io/zero_copy_stream_impl.cc",
+  "src/google/protobuf/io/zero_copy_stream_impl_lite.cc",
+  "src/google/protobuf/generated_message_reflection.cc",
+  "src/google/protobuf/message.cc",
+  "src/google/protobuf/struct.pb.cc",
+  "src/google/protobuf/timestamp.pb.cc",
+  "src/google/protobuf/map_field.cc",
+  "src/google/protobuf/message_lite.cc",
+  "src/google/protobuf/parse_context.cc",
+  "src/google/protobuf/reflection_ops.cc",
+  "src/google/protobuf/repeated_field.cc",
+  "src/google/protobuf/service.cc",
+  "src/google/protobuf/source_context.pb.cc",
+  "src/google/protobuf/stubs/bytestream.cc",
+  "src/google/protobuf/stubs/common.cc",
+  "src/google/protobuf/stubs/int128.cc",
+  "src/google/protobuf/stubs/status.cc",
+  "src/google/protobuf/stubs/statusor.cc",
+  "src/google/protobuf/stubs/stringpiece.cc",
+  "src/google/protobuf/stubs/stringprintf.cc",
+  "src/google/protobuf/stubs/structurally_valid.cc",
+  "src/google/protobuf/stubs/strutil.cc",
+  "src/google/protobuf/stubs/substitute.cc",
+  "src/google/protobuf/stubs/time.cc",
+  "src/google/protobuf/text_format.cc",
+  "src/google/protobuf/type.pb.cc",
+  "src/google/protobuf/unknown_field_set.cc",
+  "src/google/protobuf/util/delimited_message_util.cc",
+  "src/google/protobuf/util/field_comparator.cc",
+  "src/google/protobuf/util/field_mask_util.cc",
+  "src/google/protobuf/util/internal/datapiece.cc",
+  "src/google/protobuf/util/internal/default_value_objectwriter.cc",
+  "src/google/protobuf/util/internal/error_listener.cc",
+  "src/google/protobuf/util/internal/field_mask_utility.cc",
+  "src/google/protobuf/util/internal/json_escaping.cc",
+  "src/google/protobuf/util/internal/json_objectwriter.cc",
+  "src/google/protobuf/util/internal/json_stream_parser.cc",
+  "src/google/protobuf/util/internal/object_writer.cc",
+  "src/google/protobuf/util/internal/protostream_objectsource.cc",
+  "src/google/protobuf/util/internal/protostream_objectwriter.cc",
+  "src/google/protobuf/util/internal/proto_writer.cc",
+  "src/google/protobuf/util/internal/type_info.cc",
+  "src/google/protobuf/util/internal/utility.cc",
+  "src/google/protobuf/util/json_util.cc",
+  "src/google/protobuf/util/message_differencer.cc",
+  "src/google/protobuf/util/time_util.cc",
+  "src/google/protobuf/util/type_resolver_util.cc",
+  "src/google/protobuf/wire_format.cc",
+  "src/google/protobuf/wire_format_lite.cc",
+  "src/google/protobuf/wrappers.pb.cc",
+]
+
+thirdparty_sources = [
+    thirdparty_dir_secp256k1 + file for file in thirdparty_sources_secp256k1
+  ] + [
+    thirdparty_dir_protobuf + file for file in thirdparty_sources_protobuf
+  ]
+
+env_nebulas.Prepend(CPPPATH=[
+  thirdparty_dir_secp256k1, thirdparty_dir_secp256k1 + "include/", "#thirdparty/mbedtls/include/",
+  thirdparty_dir_protobuf, thirdparty_dir_protobuf + "src/"
+  ])
+env_nebulas.Prepend(INCLUDE=[
+  "#thirdparty/protobuf/src"
+  ])
 env_nebulas.Append(CPPDEFINES=["GODOT_NEBULAS", "USE_NUM_NONE"])
 
 if env["platform"] in ["android", "iphone", "javascript"]:
@@ -26,7 +119,7 @@ if env["platform"] in ["android", "iphone", "javascript"]:
     "ENABLE_MODULE_RECOVERY", "HAVE_BUILTIN_EXPECT",
     "HAVE_DLFCN_H", "HAVE_INTTYPES_H", "HAVE_MEMORY_H", "HAVE_STDINT_H",
     "HAVE_STDLIB_H", "HAVE_STRINGS_H", "HAVE_STRING_H", "HAVE_SYS_STAT_H",
-    "HAVE_SYS_TYPES_H", "HAVE_UNISTD_H"])
+    "HAVE_SYS_TYPES_H", "HAVE_UNISTD_H", "HAVE_PTHREAD"])
 else:
   env_nebulas.Append(CPPDEFINES=[
     "USE_SCALAR_4X64", "USE_SCALAR_INV_BUILTIN",
@@ -34,7 +127,7 @@ else:
     "HAVE___INT128", "ENABLE_MODULE_RECOVERY", "HAVE_BUILTIN_EXPECT",
     "HAVE_DLFCN_H", "HAVE_INTTYPES_H", "HAVE_MEMORY_H", "HAVE_STDINT_H",
     "HAVE_STDLIB_H", "HAVE_STRINGS_H", "HAVE_STRING_H", "HAVE_SYS_STAT_H",
-    "HAVE_SYS_TYPES_H", "HAVE_UNISTD_H"])
+    "HAVE_SYS_TYPES_H", "HAVE_UNISTD_H", "HAVE_PTHREAD"])
 
 env_thirdparty = env_nebulas.Clone()
 env_thirdparty.disable_warnings()
