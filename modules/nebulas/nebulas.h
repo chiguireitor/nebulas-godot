@@ -8,6 +8,7 @@
 #include "core/variant.h"
 
 #include "secp256k1.h"
+#include "secp256k1_recovery.h"
 
 /*#include <btc/utils.h>
 #include <btc/bip32.h>
@@ -39,14 +40,15 @@ private:
 	uint32_t chain_id, alg;
 	String gas_price, gas_limit;
 
-	void _get_address_bytes_by_type(uint8_t type, uint8_t* data, int data_len, uint8_t *addr_data);
-	String _get_address_by_type(uint8_t type, uint8_t* data, int data_len);
+	void _get_address_bytes_by_type(uint8_t type, uint8_t* data, int data_len, uint8_t *addr_data, bool mangle);
+	String _get_address_by_type(uint8_t type, uint8_t* data, int data_len, bool mangle);
 	bool _calc_pubkey();
 protected:
 	static void _bind_methods();
 
 public:
-	void gen_private_key();
+	bool gen_private_key();
+	bool gen_private_key_from_entropy(PoolByteArray pba);
 	PoolByteArray get_private_key();
 	Error load_private_key(PoolByteArray p_data);
 	String get_address();
