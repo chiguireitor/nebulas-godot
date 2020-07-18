@@ -1,9 +1,15 @@
 
 #include "nebulas.h"
 
+#ifndef NEBULAS_GDNATIVE
 #include "core/crypto/crypto_core.h"
 #include "core/bind/core_bind.h"
 #include "core/os/os.h"
+#endif
+
+#ifdef NEBULAS_GDNATIVE
+#include <Godot.hpp>
+#endif
 
 #include "keccak-tiny/keccak-tiny.h"
 #include "libneb/ripemd160.h"
@@ -340,6 +346,7 @@ String Nebulas::get_gas_limit() {
 	return gas_limit;
 }
 
+#ifndef NEBULAS_GDNATIVE
 void Nebulas::_bind_methods() {
   ClassDB::bind_method(D_METHOD("gen_private_key"), &Nebulas::gen_private_key);
   ClassDB::bind_method(D_METHOD("gen_private_key_from_entropy", "p_data"), &Nebulas::gen_private_key_from_entropy);
@@ -358,6 +365,28 @@ void Nebulas::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "gas_price", PROPERTY_HINT_TYPE_STRING), "set_gas_price", "get_gas_price");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "gas_limit", PROPERTY_HINT_TYPE_STRING), "set_gas_limit", "get_gas_limit");
 }
+#endif
+
+#ifdef NEBULAS_GDNATIVE
+void Nebulas::_register_methods() {
+  register_method("gen_private_key", &Nebulas::gen_private_key);
+  register_method("gen_private_key_from_entropy", &Nebulas::gen_private_key_from_entropy);
+  register_method("get_private_key", &Nebulas::get_private_key);
+  register_method("load_private_key", &Nebulas::load_private_key);
+  register_method("get_address"), &Nebulas::get_address);
+	register_method("send", &Nebulas::send);
+  register_method("send_with_payload", &Nebulas::send_with_payload);
+  register_method("set_pub_address", &Nebulas::set_pub_address);
+
+	register_method("set_gas_price", &Nebulas::set_gas_price);
+	register_method("get_gas_price", &Nebulas::get_gas_price);
+	register_method("set_gas_limit", &Nebulas::set_gas_limit);
+	register_method("get_gas_limit", &Nebulas::get_gas_limit);
+
+  register_property<Nebulas, String>("gas_price", &Nebulas::set_gas_price, &Nebulas::get_gas_price);
+	register_property<Nebulas, String>("gas_limit", &Nebulas::set_gas_limit, &Nebulas::get_gas_limit);
+}
+#endif
 
 Nebulas::Nebulas() {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;

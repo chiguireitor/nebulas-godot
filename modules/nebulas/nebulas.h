@@ -4,15 +4,19 @@
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/entropy.h>
 
+#ifndef NEBULAS_GDNATIVE
 #include "core/reference.h"
 #include "core/variant.h"
+#endif
+
+#ifdef NEBULAS_GDNATIVE
+#include <Godot.hpp>
+#include <Reference.hpp>
+#include <Variant.hpp>
+#endif
 
 #include "secp256k1.h"
 #include "secp256k1_recovery.h"
-
-/*#include <btc/utils.h>
-#include <btc/bip32.h>
-#include <btc/tx.h>*/
 
 #define PADDING_BYTE 0x19
 #define ACCOUNT_BYTE 0x57
@@ -47,7 +51,13 @@ private:
 	bool _calc_pubkey();
 	PoolByteArray _send_with_payload_from_address(const String &from, const String &to, const String &value, uint64_t nonce, const String &payload, const String &payload_type);
 protected:
+	#ifndef NEBULAS_GDNATIVE
 	static void _bind_methods();
+	#endif
+
+	#ifdef NEBULAS_GDNATIVE
+	static void _register_methods();
+	#endif
 
 public:
 	bool gen_private_key();

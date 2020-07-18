@@ -1,5 +1,5 @@
 extends HTTPRequest
-tool
+
 class_name NebulasWallet
 
 signal account_state(result)

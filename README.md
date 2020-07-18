@@ -14,6 +14,13 @@ Precompiled binaries can be found in the Nebulas site. If you need to use additi
 
 Copy the `modules` and `thirdparty` directories into your Godot build directory. Build following Godot's guides.
 
+GDNative
+==
+
+Some work has been made towards making this module be available by compiling it as a GDNative module, however, Godot doesn't exposes several parts of its internal definitions that are vital for any cryptocurrency based game.
+
+Adapting this module to a GDNative could be done in the future, along with the QRCode module that is needed by most wallets.
+
 License
 ==
 
