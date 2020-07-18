@@ -4,24 +4,55 @@ class_name NebulasContractDeployer
 
 signal deployment_complete
 
+enum NETWORK { testnet, mainnet }
+
 export(String) var address
 export(String) var password setget _set_wallet_password, _get_wallet_password
+export(NETWORK) var network = NETWORK.testnet setget _set_network
+#export(String) var nas_balance setget _set_nas_balance, _get_nas_balance
 
 var _current_warning = ''
 var _current_password = ''
 
 func editor_only(): # Needed to signal godot that this NebulasWallet descendant won't go live on production
 	return true
-
+	
 func _ready():
 	use_threads = true
 	_current_warning = 'Change Password to open or create wallet'
 	update_configuration_warning()
+	
+	if network == NETWORK.testnet:
+		_host = _api_testnet
+		_explorer = _explorer_testnet
+		_network = 'testnet'
+	else:
+		_host = _api_mainnet
+		_explorer = _explorer_mainnet
+		_network = 'mainnet'
+		
 	if Engine.is_editor_hint():
 		neb = Nebulas.new()
+	else:
+		NebulasWalletSingleton._host = _host
+		NebulasWalletSingleton._explorer = _explorer
+		NebulasWalletSingleton._network = _network
+		print('Using network ', _network)
 
 func _get_configuration_warning():
 	return _current_warning
+
+func _set_network(v):
+	network = v
+
+	if v == NETWORK.testnet:
+		_host = _api_testnet
+		_explorer = _explorer_testnet
+		_network = 'testnet'
+	else:
+		_host = _api_mainnet
+		_explorer = _explorer_mainnet
+		_network = 'mainnet'
 
 func _set_wallet_password(v):
 	password = ''
@@ -33,7 +64,7 @@ func _set_wallet_password(v):
 			if f.open_encrypted(wallet_path, File.READ, key) == OK:
 				var hex = f.get_as_text()
 				f.close()
-
+		
 				var p = 0
 				var pba = PoolByteArray()
 				for i in range(0, len(hex), 2):
@@ -61,14 +92,14 @@ func _set_wallet_password(v):
 			address = neb.get_address()
 			_current_warning = ''
 			update_configuration_warning()
-
+	
 func _get_wallet_password():
 	return ''
 
 func find_transaction_object():
 	for i in range(get_child_count()):
 		var itm = get_child(i)
-
+		
 		if itm.has_signal("tx_result"):
 			itm.from = get_address()
 			itm.nonce = _last_account_state.nonce
@@ -82,15 +113,15 @@ func deploy_contract(contract, args):
 	if _current_password == null or len(_current_password) == 0:
 		emit_signal("deployment_complete", { "error": "Deployer wallet not unlocked" })
 		return
-
+		
 	load_wallet(_current_password)
-
+	
 	var t = find_transaction_object()
 
 	if t == null:
 		emit_signal("deployment_complete", { "error": "NebulasContractDeployer needs a NebulasTransaction as child to deploy contracts" })
 		return
-
+		
 	t.to = get_address()
 	t.value = 0
 	t.contract = {
@@ -120,3 +151,13 @@ func deploy_contract(contract, args):
 
 func _build_url_for_method(method: String):
 	return _host + '/' + _api_version + '/' + _api_path + '/' + method
+
+#func _update_nas_balance():
+#	if address != null and len(address) == 35:
+#		var url = _build_url_for_method('accountstate')
+#		var params = {
+#			"address": address,
+#			"height": 0
+#		}
+#		var headers = ["Content-Type: application/json"]
+#		request(url, headers, true, HTTPClient.METHOD_POST, JSON.print(params))

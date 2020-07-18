@@ -1,5 +1,5 @@
 extends HTTPRequest
-
+tool
 class_name NebulasWallet
 
 signal account_state(result)
@@ -49,20 +49,20 @@ var updating_nrc721s = false
 func register_nrc20(token):
 	_known_nrc20s[token.token_symbol] = token
 	emit_signal("new_nrc20", token)
-
+	
 func register_nrc721(token):
 	_known_nrc721s[token.address] = token
 	emit_signal("new_nrc721", token)
 	start_update_timeout()
-
+	
 func register_nft(nft):
 	if !_nft_by_name.has(nft.name):
 		_nft_by_name[nft.name] = {"watchers": [], "token": nft}
 	call_nft_watchers(nft)
-
+	
 func register_wallet_ui_send(cb):
 	_wallet_ui_send = cb
-
+	
 func invoke_ui_send(token, amount=0):
 	if _wallet_ui_send != null:
 		_wallet_ui_send.call_func(token, amount)
@@ -76,17 +76,17 @@ func watch_nft_by_name(name, cb):
 	_nft_by_name[name].watchers.append(cb)
 	if _nft_by_name[name].token != null:
 		cb.call_func(_nft_by_name[name].token)
-
+	
 func call_nft_watchers(token):
 	for w in _nft_by_name[token.name].watchers:
 		w.call_func(token)
 
 func get_nrc20s():
 	return _known_nrc20s.keys()
-
+	
 func get_nrc721s():
 	return _known_nrc721s.keys()
-
+	
 func get_token_by_name(name):
 	if _nft_by_name.has(name) and _nft_by_name[name].token != null:
 		return _nft_by_name[name].token
@@ -104,11 +104,11 @@ func update_balances():
 func update_nrc721s_balances():
 	if updating_nrc721s:
 		return
-
+		
 	updating_nrc721s = true
 	for token_address in _known_nrc721s:
 		var token = _known_nrc721s[token_address]
-
+		
 		for i in range(token.get_child_count()):
 			var child = token.get_child(i)
 
@@ -121,18 +121,18 @@ func update_nrc721s_balances():
 func get_token(tk_name):
 	if _known_nrc20s.has(tk_name):
 		return _known_nrc20s[tk_name]
-
+		
 	if _known_nrc721s.has(tk_name):
 		return _known_nrc721s[tk_name]
-
+		
 	return null
-
+	
 func get_token_by_address(addr):
 	for x in _known_nrc20s:
 		var tok = _known_nrc20s[x]
 		if addr == tok.address:
 			return tok
-
+			
 	for x in _known_nrc721s:
 		var tok = _known_nrc721s[x]
 		if addr == tok.address:
@@ -145,17 +145,17 @@ func _ready():
 		_http_api.use_threads = true
 		add_child(_http_api)
 		_http_api.connect("request_completed", self, "_get_api_completed", ["api"])
-
+	
 		_http_exp = HTTPRequest.new()
 		_http_exp.use_threads = true
 		add_child(_http_exp)
 		_http_exp.connect("request_completed", self, "_get_api_completed", ["exp"])
-
+		
 		_timer_update = Timer.new()
 		_timer_update.one_shot = true
 		_timer_update.connect("timeout", self, "update_balances")
 		add_child(_timer_update)
-
+	
 		var f = File.new()
 		if f.file_exists(wallet_path + '.pub'):
 			f.open(wallet_path + '.pub', File.READ)
@@ -164,8 +164,8 @@ func _ready():
 				neb.set_pub_address(addr)
 				f.close()
 				start_update_timeout()
-
-		get_gas_price()
+	
+		get_gas_price()		
 	elif Engine.is_editor_hint():
 		_http_api = self
 		_api_handler_signal = {}
@@ -193,19 +193,23 @@ func set_api(host_url: String, version: String = 'v1'):
 
 func _build_url_for_method(method: String):
 	return _host + '/' + _api_version + '/' + _api_path + '/' + method
-
+	
 func build_url_for_method(method: String):
 	return _build_url_for_method(method)
 
 func get_current_gas_limit():
 	return _current_gas_limit
-
+	
 func get_current_gas_price():
 	return _current_gas_price
 
 func num_to_printable(n, decs=18):
 	var num = float(n) / float("1" + "0".repeat(decs))
 	return str(num)
+	
+#func printable_to_num(n, decs=18):
+#	var num = float(n) * float("1" + "0".repeat(decs))
+#	return num
 
 func printable_to_num(n: String, decs=18):
 	var parts = n.split('.')
@@ -223,6 +227,8 @@ func printable_to_num(n: String, decs=18):
 		while len(res_dec) < decs:
 			res_dec += '0'
 		return int(res + res_dec)
+		
+	#var num = float(n) * float("1" + "0".repeat(decs))
 
 func wallet_exists():
 	var f = File.new()
@@ -241,14 +247,14 @@ func new_wallet(pin: String):
 		var pba = cr.generate_random_bytes(32)
 		var success = neb.gen_private_key_from_entropy(pba)
 		var tries = 50
-
+		
 		while tries > 0 and !success:
 			tries -= 1
 			success = neb.gen_private_key_from_entropy(pba)
-
+		
 		if success:
 			finish_creating_new_wallet(pin)
-
+		
 		return success
 
 func get_private_key():
@@ -263,7 +269,7 @@ func finish_creating_new_wallet(pin):
 	f.open_encrypted(wallet_path, File.WRITE, key)
 	f.store_string(hex)
 	f.close()
-
+	
 	f.open(wallet_path + '.pub', File.WRITE)
 	f.store_string(neb.get_address())
 	f.close()
@@ -373,7 +379,7 @@ func _get_api_completed(result, response_code, headers, body: PoolByteArray, ori
 	var utf = body.get_string_from_utf8()
 	var expected_signal = _api_handler_signal[origin]
 	_api_handler_signal.erase(origin)
-
+		
 	if response_code == 200:
 		var ob = JSON.parse(utf)
 		if ob.error == OK:
