@@ -1,17 +1,121 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <class name="Nebulas" version="3.2">
 	<brief_description>
-		Nebulas (brief)
+		Nebulas NAS, NRC20 and NRC721 support for Godot games.
 	</brief_description>
 	<description>
-		Nebulas, long.
+		This library supports a set of native methods to enable sending, receiving, deploying and executing all kind of contracts in the Nebulas blockchain.
 	</description>
 	<tutorials>
 	</tutorials>
+
 	<methods>
+		<method name="gen_private_key">
+			<return type="bool">
+			</return>
+			<description>
+				Generates a private key in the current wallet using "mbedtls" entropy generator.
+				Returns false in case of failure to initialize mbedtls, true on success.
+			</description>
+		</method>
+
+		<method name="gen_private_key_from_entropy">
+			<return type="bool">
+			</return>
+			<argument index="0" name="data" type="PoolByteArray">
+			</argument>
+			<description>
+				Generates a private key in the current wallet using the provided entropy.
+				The entropy array must be exactly 32 bytes long.
+				Returns false in case of failure to initialize using the entropy provided, true on success.
+			</description>
+		</method>
+
+		<method name="get_private_key">
+			<return type="PoolByteArray">
+			</return>
+			<description>
+				Returns the current private key in a PoolByteArray.
+				Using this method if no key has been loaded previously results in undefined behaviour.
+			</description>
+		</method>
+
+		<method name="load_private_key">
+			<return type="Error">
+			</return>
+			<argument index="0" name="data" type="PoolByteArray">
+			</argument>
+			<description>
+				Loads the saved privatekey. Return OK on success, anything else otherwise.
+			</description>
+		</method>
+
+		<method name="get_address">
+			<return type="String">
+			</return>
+			<description>
+				Returns the current address. Result is undefined if no previous private key (or temporary pub address) has been loaded.
+			</description>
+		</method>
+
+		<method name="send">
+			<return type="PoolByteArray">
+			</return>
+			<argument index="0" name="to" type="String">
+			</argument>
+			<argument index="1" name="value" type="String">
+			</argument>
+			<argument index="2" name="nonce" type="int">
+			</argument>
+			<description>
+				Constructs and signs a NAS send to the given "to" address, with "value" being a non-decimal String and "nonce" a monotonically incrementing value (you have to retrieve the last used nonce for the current address somehow).
+				"value" must be in non decimal form, i.e. 1 NAS is expressed as a "1" and 18 "0".
+				Returns the binary transaction as a PoolByteArray. The PoolByteArray will be empty in case of error.
+			</description>
+		</method>
+
+		<method name="send_with_payload">
+			<return type="PoolByteArray">
+			</return>
+			<argument index="0" name="to" type="String">
+			</argument>
+			<argument index="1" name="value" type="String">
+			</argument>
+			<argument index="2" name="nonce" type="int">
+			</argument>
+			<argument index="1" name="payload" type="String">
+			</argument>
+			<argument index="2" name="payload_type" type="String">
+			</argument>
+			<description>
+				Constructs and signs a payload operation sent to the "to" given address. It can include addition NAS as the "value" being a non-decimal String and "nonce" a monotonically incrementing value (you have to retrieve the last used nonce for the current address somehow).
+				"payload" can be any type of valid payload in nebulas, according to the "payload_type".
+				"payload_type" can be any of "binary" (arbitrary data), "call" (contract function calls) or "deploy" (contract deployments).
+				"value" must be in non decimal form, i.e. 1 NAS is expressed as a "1" and 18 "0".
+				Returns the binary transaction as a PoolByteArray. The PoolByteArray will be empty in case of error.
+			</description>
+		</method>
+
+		<method name="set_pub_address">
+			<argument index="0" name="address" type="String">
+			</argument>
+			<description>
+				Sets the temporary address.
+				Unused at the moment.
+			</description>
+		</method>
 	</methods>
+
 	<members>
+		<member name="gas_price" type="String" setter="set_gas_price" getter="get_gas_price">
+			The current gas price for transaction building.
+		</member>
+
+		<member name="gas_limit" type="String" setter="set_gas_limit" getter="get_gas_limit">
+			The current gas limit for transaction building.
+		</member>
 	</members>
+
 	<constants>
 	</constants>
 </class>

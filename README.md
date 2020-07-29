@@ -3,6 +3,8 @@ Nebulas-Godot
 
 A Godot 3.2+ compatible module to enable your games to use Nebulas-powered tokens and smart contracts.
 
+Usage Tutorial: https://github.com/chiguireitor/nebulas-sample
+
 Done with funding thanks to [Go Nebulas project 293](https://go.nebulas.io/project/293), a proposal created by the Nebulas community to further the Nebulas reach into gaming.
 
 Usage
